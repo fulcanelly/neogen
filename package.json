@@ -1,6 +1,6 @@
 {
   "name": "neogen",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "main": "src/index.mts",
   "description": "Code generation tool for `neogma`",
   "repository": "https://github.com/fulcanelly/neogen",
