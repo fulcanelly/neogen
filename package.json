@@ -1,9 +1,9 @@
 {
   "name": "neogen",
   "version": "1.0.1",
-  "main": "src/index.ts",
+  "main": "src/index.mts",
   "description": "Code generation tool for `neogma`",
-  "repository": "",
+  "repository": "https://github.com/fulcanelly/neogen",
   "license": "MIT",
   "dependencies": {
     "@types/lodash": "^4.14.201",

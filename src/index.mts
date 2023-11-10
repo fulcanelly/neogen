@@ -548,33 +548,3 @@ export namespace neogen {
 
 //////////////////////////////////////
 
-function example() {
-    neogen.generateAll({
-        neogamaInstanceName: 'neogma',
-        pathToNeogama: '../src/neo4j',
-        outputFolder: './out'
-    }, [{
-        label: 'OnlineLog',
-        schema: {
-            uuid: 'string',
-            online: 'string'
-        }
-    }, {
-        label: 'User',
-        schema: {
-            name: 'string',
-            uuid: 'string',
-            mdfgm: 'boolean'
-        }
-    }], {
-        ONLINE_BELONS_TO: {
-            User: 'online_logs',
-            OnlineLog: 'of_user',
-        },
-        ONLINE_REPORTED_BY: {
-            User: 'logs_reported',
-            OnlineLog: 'reported_by'
-        },
-    })
-}
-
