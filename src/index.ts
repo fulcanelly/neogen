@@ -22,6 +22,12 @@ import _ from 'lodash';
 //4) make more than two relations per label in (relation.extractRelationsFromDSL)
 //5) make it more DRY
 //6) add logging
+
+// base
+// config options (generateMethods, generateRelations, generateBase bool)
+// unions & shit
+// constraints
+
 export namespace neogen {
     export enum FileType {
         RELATION,
@@ -38,8 +44,10 @@ export namespace neogen {
     export type PropType = { name: string, type: string }
 
     export type ctx = {
-        outputFolder: string
+        outputFolder: string,
+        generateBase?: boolean
     }
+
     type ModelToImport = string
     export type Types = 'string' | 'boolean' | 'number'
     export type PropsTypes = { [prop: string]: Types }
@@ -61,9 +69,13 @@ export namespace neogen {
         export const staticMethodsNameFor = (label: string) => lowerFirstChar(label) + 'StaticMethods'
         export const instanceNameFor = (label: string) => label + 'Instance'
 
+        export const baseInstanceMethods = () => "baseInstanceMethods"
+        export const baseStaticMethods = () => "baseStaticMethods"
+
         export namespace file {
             export const forModel = (label: string) => _.snakeCase(label)
             export const forModelMethods = (label: string) => '_' + _.snakeCase(label)
+            export const forBaseMethods = () => '__base'
         }
     }
 
@@ -78,6 +90,23 @@ export namespace neogen {
 
         const importSpecifierFromName = (name: string) =>
             ts.factory.createImportSpecifier(false, undefined, ts.factory.createIdentifier(name))
+
+
+        export function generateBaseImports() {
+            return ts.factory.createImportDeclaration(
+                undefined, // modifiers array
+                ts.factory.createImportClause(
+                    false, // IsTypeOnly
+                    undefined, // No namespace import
+                    ts.factory.createNamedImports([
+                        naming.baseInstanceMethods(),
+                        naming.baseStaticMethods(),
+                    ].map(importSpecifierFromName))
+                ),
+                ts.factory.createStringLiteral('./' + naming.file.forBaseMethods()), // module specifier
+                undefined  // assert clause
+            );
+        }
 
         export function generateMethodsImport(modelName: string) {
             return ts.factory.createImportDeclaration(
@@ -205,12 +234,12 @@ export namespace neogen {
         function generateModel(schema: Schema) {
             const neogmaInstance =
                 ts.factory.createCallExpression(
-                ts.factory.createPropertyAccessExpression(
-                    ts.factory.createIdentifier('neogen'),
-                    ts.factory.createIdentifier('get')
-                ),
-                undefined,
-                [])
+                    ts.factory.createPropertyAccessExpression(
+                        ts.factory.createIdentifier('neogen'),
+                        ts.factory.createIdentifier('get')
+                    ),
+                    undefined,
+                    [])
 
             const modelFactoryCall = ts.factory.createCallExpression(
                 ts.factory.createIdentifier('ModelFactory'), // Expression
@@ -265,8 +294,17 @@ export namespace neogen {
         }
     }
 
+
     export namespace methods {
-        function generateStaticMethods(label: string): ts.Node {
+        function generateStaticMethods(ctx: ctx, label: string): ts.Node {
+            const objectContent: ts.ObjectLiteralElementLike[] = []
+
+            if (ctx.generateBase) {
+                objectContent.push(
+                    ts.factory.createSpreadAssignment(ts.factory.createIdentifier(naming.baseStaticMethods()))
+                )
+            }
+
             return ts.factory.createVariableStatement(
                 [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
                 ts.factory.createVariableDeclarationList(
@@ -275,7 +313,7 @@ export namespace neogen {
                             ts.factory.createIdentifier(naming.staticMethodsNameFor(label)),
                             undefined,
                             undefined,
-                            ts.factory.createObjectLiteralExpression([], false)
+                            ts.factory.createObjectLiteralExpression(objectContent, false)
                         )
                     ],
                     ts.NodeFlags.Const
@@ -283,7 +321,15 @@ export namespace neogen {
             );
         }
 
-        function generateInstanceMethods(label: string): ts.Node {
+        function generateInstanceMethods(ctx: ctx, label: string): ts.Node {
+            const objectContent: ts.ObjectLiteralElementLike[] = []
+
+            if (ctx.generateBase) {
+                objectContent.push(
+                    ts.factory.createSpreadAssignment(ts.factory.createIdentifier(naming.baseInstanceMethods()))
+                )
+            }
+
             const body = ts.factory.createBlock([
                 ts.factory.createReturnStatement(
                     ts.factory.createAsExpression(
@@ -296,6 +342,19 @@ export namespace neogen {
                 )
             ], true)
 
+            const selfMethod = ts.factory.createMethodDeclaration(
+                undefined,
+                undefined,
+                ts.factory.createIdentifier("self"),
+                undefined,
+                undefined,
+                [],
+                undefined,
+                body
+            )
+
+            objectContent.push(selfMethod)
+
             return ts.factory.createVariableStatement(
                 [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
                 ts.factory.createVariableDeclarationList(
@@ -305,18 +364,7 @@ export namespace neogen {
                             undefined,
                             undefined,
                             ts.factory.createObjectLiteralExpression(
-                                [
-                                    ts.factory.createMethodDeclaration(
-                                        undefined,
-                                        undefined,
-                                        ts.factory.createIdentifier("self"),
-                                        undefined,
-                                        undefined,
-                                        [],
-                                        undefined,
-                                        body
-                                    )
-                                ],
+                                objectContent,
                                 false
                             )
                         )
@@ -327,14 +375,70 @@ export namespace neogen {
 
         }
 
-        export function generateMethodFilesOf(files: GenerateSourceFile[]): GenerateSourceFile[] {
+        export function generateMethodFilesOf(ctx: ctx, files: GenerateSourceFile[]): GenerateSourceFile[] {
+            const importsBody: ts.Node[] = []
+
+            if (ctx.generateBase) {
+                importsBody.push(imports.generateBaseImports())
+            }
+
             const mapToDeclaration =
                 (file: GenerateSourceFile) => [
                     imports.generateAllImportsOfModel(file.modelName!),
-                    generateStaticMethods(file.modelName!),
-                    generateInstanceMethods(file.modelName!)
+                    ...importsBody,
+                    generateStaticMethods(ctx, file.modelName!),
+                    generateInstanceMethods(ctx, file.modelName!)
                 ]
             return files.map(_ => new GenerateSourceFile(_.modelName, mapToDeclaration(_), FileType.METHODS))
+        }
+    }
+
+
+    export namespace base {
+
+        function generateStaticMethodsBase(): ts.Node {
+            return ts.factory.createVariableStatement(
+                [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+                ts.factory.createVariableDeclarationList(
+                    [
+                        ts.factory.createVariableDeclaration(
+                            ts.factory.createIdentifier(naming.baseStaticMethods()),
+                            undefined,
+                            undefined,
+                            ts.factory.createObjectLiteralExpression([], false)
+                        )
+                    ],
+                    ts.NodeFlags.Const
+                )
+            );
+        }
+
+        function generateInstanceMethodsBase(): ts.Node {
+
+
+            return ts.factory.createVariableStatement(
+                [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+                ts.factory.createVariableDeclarationList(
+                    [
+                        ts.factory.createVariableDeclaration(
+                            ts.factory.createIdentifier(naming.baseInstanceMethods()),
+                            undefined,
+                            undefined,
+                            ts.factory.createObjectLiteralExpression([], false)
+                        )
+                    ],
+                    ts.NodeFlags.Const
+                )
+            );
+
+        }
+
+
+        export function generateBase(): ts.Node[] {
+            return [
+                generateStaticMethodsBase(),
+                generateInstanceMethodsBase(),
+            ]
         }
     }
 
@@ -507,6 +611,7 @@ export namespace neogen {
                 [R.equals(FileType.MODEL), R.always(naming.file.forModel(this.modelName!))],
                 [R.equals(FileType.METHODS), R.always(naming.file.forModelMethods(this.modelName!))],
                 [R.equals(FileType.RELATION), R.always('__relations')],
+                [R.equals(FileType.BASE), R.always('__base')],
             ])(this.type) + '.ts'
         }
 
@@ -520,6 +625,7 @@ export namespace neogen {
     }
 
 
+
     export function generateAll(ctx: ctx, schemas: Schema[], relations: RelationsDSL) {
         const parsedRelations = relation.extractRelationsFromDSL(relations)
 
@@ -529,8 +635,13 @@ export namespace neogen {
                 model.generateComposed(ctx, schema, parsedRelations),
                 FileType.MODEL));
 
-        sources.push(...methods.generateMethodFilesOf(sources))
+        sources.push(...methods.generateMethodFilesOf(ctx, sources))
         sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), FileType.RELATION))
+
+        if (ctx.generateBase) {
+            sources.push(new GenerateSourceFile(null, base.generateBase(), FileType.BASE))
+        }
+
         sources.map(it => it.save(ctx))
     }
 
@@ -551,11 +662,9 @@ export namespace neogen {
 
     }
 
-    console.log('init')
     let instance: Neogma
 
     export function get(): Neogma {
-        console.log('get')
         if (!instance) {
             throw new Error('Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order')
         }
@@ -563,8 +672,6 @@ export namespace neogen {
     }
 
     export function setInstance(val: Neogma): void {
-        console.log('set')
-
         instance = val
     }
 

@@ -57,10 +57,13 @@ var neogen;
     naming2.instanceMethodsNameFor = (label) => lowerFirstChar(label) + "InstanceMethods";
     naming2.staticMethodsNameFor = (label) => lowerFirstChar(label) + "StaticMethods";
     naming2.instanceNameFor = (label) => label + "Instance";
+    naming2.baseInstanceMethods = () => "baseInstanceMethods";
+    naming2.baseStaticMethods = () => "baseStaticMethods";
     let file;
     ((file2) => {
       file2.forModel = (label) => import_lodash.default.snakeCase(label);
       file2.forModelMethods = (label) => "_" + import_lodash.default.snakeCase(label);
+      file2.forBaseMethods = () => "__base";
     })(file = naming2.file || (naming2.file = {}));
   })(naming = neogen2.naming || (neogen2.naming = {}));
   let typing;
@@ -72,6 +75,27 @@ var neogen;
   let imports;
   ((imports2) => {
     const importSpecifierFromName = (name) => import_typescript.default.factory.createImportSpecifier(false, void 0, import_typescript.default.factory.createIdentifier(name));
+    function generateBaseImports() {
+      return import_typescript.default.factory.createImportDeclaration(
+        void 0,
+        // modifiers array
+        import_typescript.default.factory.createImportClause(
+          false,
+          // IsTypeOnly
+          void 0,
+          // No namespace import
+          import_typescript.default.factory.createNamedImports([
+            naming.baseInstanceMethods(),
+            naming.baseStaticMethods()
+          ].map(importSpecifierFromName))
+        ),
+        import_typescript.default.factory.createStringLiteral("./" + naming.file.forBaseMethods()),
+        // module specifier
+        void 0
+        // assert clause
+      );
+    }
+    imports2.generateBaseImports = generateBaseImports;
     function generateMethodsImport(modelName) {
       return import_typescript.default.factory.createImportDeclaration(
         void 0,
@@ -270,7 +294,13 @@ var neogen;
   })(model = neogen2.model || (neogen2.model = {}));
   let methods;
   ((methods2) => {
-    function generateStaticMethods(label) {
+    function generateStaticMethods(ctx, label) {
+      const objectContent = [];
+      if (ctx.generateBase) {
+        objectContent.push(
+          import_typescript.default.factory.createSpreadAssignment(import_typescript.default.factory.createIdentifier(naming.baseStaticMethods()))
+        );
+      }
       return import_typescript.default.factory.createVariableStatement(
         [import_typescript.default.factory.createModifier(import_typescript.default.SyntaxKind.ExportKeyword)],
         import_typescript.default.factory.createVariableDeclarationList(
@@ -279,14 +309,20 @@ var neogen;
               import_typescript.default.factory.createIdentifier(naming.staticMethodsNameFor(label)),
               void 0,
               void 0,
-              import_typescript.default.factory.createObjectLiteralExpression([], false)
+              import_typescript.default.factory.createObjectLiteralExpression(objectContent, false)
             )
           ],
           import_typescript.default.NodeFlags.Const
         )
       );
     }
-    function generateInstanceMethods(label) {
+    function generateInstanceMethods(ctx, label) {
+      const objectContent = [];
+      if (ctx.generateBase) {
+        objectContent.push(
+          import_typescript.default.factory.createSpreadAssignment(import_typescript.default.factory.createIdentifier(naming.baseInstanceMethods()))
+        );
+      }
       const body = import_typescript.default.factory.createBlock([
         import_typescript.default.factory.createReturnStatement(
           import_typescript.default.factory.createAsExpression(
@@ -298,6 +334,17 @@ var neogen;
           )
         )
       ], true);
+      const selfMethod = import_typescript.default.factory.createMethodDeclaration(
+        void 0,
+        void 0,
+        import_typescript.default.factory.createIdentifier("self"),
+        void 0,
+        void 0,
+        [],
+        void 0,
+        body
+      );
+      objectContent.push(selfMethod);
       return import_typescript.default.factory.createVariableStatement(
         [import_typescript.default.factory.createModifier(import_typescript.default.SyntaxKind.ExportKeyword)],
         import_typescript.default.factory.createVariableDeclarationList(
@@ -307,18 +354,7 @@ var neogen;
               void 0,
               void 0,
               import_typescript.default.factory.createObjectLiteralExpression(
-                [
-                  import_typescript.default.factory.createMethodDeclaration(
-                    void 0,
-                    void 0,
-                    import_typescript.default.factory.createIdentifier("self"),
-                    void 0,
-                    void 0,
-                    [],
-                    void 0,
-                    body
-                  )
-                ],
+                objectContent,
                 false
               )
             )
@@ -327,16 +363,63 @@ var neogen;
         )
       );
     }
-    function generateMethodFilesOf(files) {
+    function generateMethodFilesOf(ctx, files) {
+      const importsBody = [];
+      if (ctx.generateBase) {
+        importsBody.push(imports.generateBaseImports());
+      }
       const mapToDeclaration = (file) => [
         imports.generateAllImportsOfModel(file.modelName),
-        generateStaticMethods(file.modelName),
-        generateInstanceMethods(file.modelName)
+        ...importsBody,
+        generateStaticMethods(ctx, file.modelName),
+        generateInstanceMethods(ctx, file.modelName)
       ];
       return files.map((_2) => new GenerateSourceFile(_2.modelName, mapToDeclaration(_2), 2 /* METHODS */));
     }
     methods2.generateMethodFilesOf = generateMethodFilesOf;
   })(methods = neogen2.methods || (neogen2.methods = {}));
+  let base;
+  ((base2) => {
+    function generateStaticMethodsBase() {
+      return import_typescript.default.factory.createVariableStatement(
+        [import_typescript.default.factory.createModifier(import_typescript.default.SyntaxKind.ExportKeyword)],
+        import_typescript.default.factory.createVariableDeclarationList(
+          [
+            import_typescript.default.factory.createVariableDeclaration(
+              import_typescript.default.factory.createIdentifier(naming.baseStaticMethods()),
+              void 0,
+              void 0,
+              import_typescript.default.factory.createObjectLiteralExpression([], false)
+            )
+          ],
+          import_typescript.default.NodeFlags.Const
+        )
+      );
+    }
+    function generateInstanceMethodsBase() {
+      return import_typescript.default.factory.createVariableStatement(
+        [import_typescript.default.factory.createModifier(import_typescript.default.SyntaxKind.ExportKeyword)],
+        import_typescript.default.factory.createVariableDeclarationList(
+          [
+            import_typescript.default.factory.createVariableDeclaration(
+              import_typescript.default.factory.createIdentifier(naming.baseInstanceMethods()),
+              void 0,
+              void 0,
+              import_typescript.default.factory.createObjectLiteralExpression([], false)
+            )
+          ],
+          import_typescript.default.NodeFlags.Const
+        )
+      );
+    }
+    function generateBase() {
+      return [
+        generateStaticMethodsBase(),
+        generateInstanceMethodsBase()
+      ];
+    }
+    base2.generateBase = generateBase;
+  })(base = neogen2.base || (neogen2.base = {}));
   let relation;
   ((relation2) => {
     function extractRelationsFromDSL(dsl) {
@@ -475,7 +558,8 @@ var neogen;
       return R.cond([
         [R.equals(1 /* MODEL */), R.always(naming.file.forModel(this.modelName))],
         [R.equals(2 /* METHODS */), R.always(naming.file.forModelMethods(this.modelName))],
-        [R.equals(0 /* RELATION */), R.always("__relations")]
+        [R.equals(0 /* RELATION */), R.always("__relations")],
+        [R.equals(4 /* BASE */), R.always("__base")]
       ])(this.type) + ".ts";
     }
     obtainWriteMode() {
@@ -493,8 +577,11 @@ var neogen;
       model.generateComposed(ctx, schema, parsedRelations),
       1 /* MODEL */
     ));
-    sources.push(...methods.generateMethodFilesOf(sources));
+    sources.push(...methods.generateMethodFilesOf(ctx, sources));
     sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), 0 /* RELATION */));
+    if (ctx.generateBase) {
+      sources.push(new GenerateSourceFile(null, base.generateBase(), 4 /* BASE */));
+    }
     sources.map((it) => it.save(ctx));
   }
   neogen2.generateAll = generateAll;
@@ -512,10 +599,8 @@ var neogen;
       result.split(";\n").join("\n")
     );
   }
-  console.log("init");
   let instance;
   function get() {
-    console.log("get");
     if (!instance) {
       throw new Error("Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order");
     }
@@ -523,7 +608,6 @@ var neogen;
   }
   neogen2.get = get;
   function setInstance(val) {
-    console.log("set");
     instance = val;
   }
   neogen2.setInstance = setInstance;

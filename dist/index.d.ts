@@ -19,6 +19,7 @@ declare namespace neogen {
     };
     export type ctx = {
         outputFolder: string;
+        generateBase?: boolean;
     };
     type ModelToImport = string;
     export type Types = 'string' | 'boolean' | 'number';
@@ -41,9 +42,12 @@ declare namespace neogen {
         const instanceMethodsNameFor: (label: string) => string;
         const staticMethodsNameFor: (label: string) => string;
         const instanceNameFor: (label: string) => string;
+        const baseInstanceMethods: () => string;
+        const baseStaticMethods: () => string;
         namespace file {
             const forModel: (label: string) => string;
             const forModelMethods: (label: string) => string;
+            const forBaseMethods: () => string;
         }
     }
     export namespace typing {
@@ -51,6 +55,7 @@ declare namespace neogen {
         const staticMethodsNameFor: (label: string) => ts.TypeQueryNode;
     }
     export namespace imports {
+        function generateBaseImports(): ts.ImportDeclaration;
         function generateMethodsImport(modelName: string): ts.ImportDeclaration;
         function generateStaticImports(): ts.ImportDeclaration;
         function generateNeogenImport(): ts.ImportDeclaration;
@@ -60,7 +65,10 @@ declare namespace neogen {
         function generateComposed(ctx: ctx, schema: Schema, relations: Relation[]): ts.Node[];
     }
     export namespace methods {
-        function generateMethodFilesOf(files: GenerateSourceFile[]): GenerateSourceFile[];
+        function generateMethodFilesOf(ctx: ctx, files: GenerateSourceFile[]): GenerateSourceFile[];
+    }
+    export namespace base {
+        function generateBase(): ts.Node[];
     }
     export namespace relation {
         function extractRelationsFromDSL(dsl: Object): Relation[];
