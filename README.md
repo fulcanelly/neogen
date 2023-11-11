@@ -1,3 +1,7 @@
+# neogen
+
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/fulcanelly/neogen/tests)
+
 # What is neogen?
 
 neogen is a code generation tool for `neogma`, focused on automating and streamlining the development of Neo4j object-graph mappings (OGMs). It facilitates efficient model generation, relationship setup, and method creation, while ensuring type safety in Neo4j-based projects.

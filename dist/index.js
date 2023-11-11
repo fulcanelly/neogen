@@ -189,15 +189,37 @@ var neogen;
   })(imports = neogen2.imports || (neogen2.imports = {}));
   let common;
   ((common2) => {
-    function straightforwardConvert(object) {
+    function straightforwardConvertValue(value) {
+      if (typeof value == "string") {
+        return import_typescript.default.factory.createStringLiteral(value);
+      }
+      if (typeof value == "number") {
+        return import_typescript.default.factory.createNumericLiteral(value);
+      }
+      if (typeof value == "boolean") {
+        return value ? import_typescript.default.factory.createTrue() : import_typescript.default.factory.createFalse();
+      }
+      if (value instanceof Array) {
+        return import_typescript.default.factory.createArrayLiteralExpression(
+          value.map(straightforwardConvertValue)
+        );
+      }
+      if (value instanceof Object) {
+        return straightforwardObjectConvert(value);
+      }
+      console.log(value);
+      throw "Non supported type";
+    }
+    common2.straightforwardConvertValue = straightforwardConvertValue;
+    function straightforwardObjectConvert(object) {
       return import_typescript.default.factory.createObjectLiteralExpression(
         Object.entries(object).map(
-          ([key, value]) => import_typescript.default.factory.createPropertyAssignment(key, import_typescript.default.factory.createStringLiteral(value))
+          ([key, value]) => import_typescript.default.factory.createPropertyAssignment(key, straightforwardConvertValue(value))
         ),
         true
       );
     }
-    common2.straightforwardConvert = straightforwardConvert;
+    common2.straightforwardObjectConvert = straightforwardObjectConvert;
   })(common = neogen2.common || (neogen2.common = {}));
   let model;
   ((model2) => {
@@ -218,6 +240,7 @@ var neogen;
         }
         throw "Unknown type format";
       }
+      props2.extractTypeFromSchemeType = extractTypeFromSchemeType;
       function generatePropsType(schema) {
         const propsTypes = Object.entries(schema.schema).map(([name, typeName]) => createPropertySignature(
           name,
@@ -255,11 +278,12 @@ var neogen;
           );
           return createSimpleTypeDef(typeArray);
         } else if (type instanceof Object) {
-          return common.straightforwardConvert(type);
+          return common.straightforwardObjectConvert(type);
         } else {
           throw new Error("Invalid type");
         }
       }
+      instance3.generatePropTypeExpression = generatePropTypeExpression;
       function generateSpeicifProp(prop) {
         return import_typescript.default.factory.createPropertyAssignment(
           prop.name,
@@ -677,41 +701,31 @@ var neogen;
     ]
   });
   function generateAll(ctx, schemas, relations) {
-    logger.silly("Started neogen");
-    const parsedRelations = relation.extractRelationsFromDSL(relations);
-    logger.info("Parsed relations DSL");
-    const sources = schemas.map((schema) => new GenerateSourceFile(
-      schema.label,
-      model.generateComposed(ctx, schema, parsedRelations),
-      1 /* MODEL */
-    ));
-    logger.info("Generated types and props defenitions");
-    sources.push(...methods.generateMethodFilesOf(ctx, sources));
-    logger.info("Generated methods files");
-    sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), 0 /* RELATION */));
-    logger.info("Generated relations file");
-    if (ctx.generateBase) {
-      sources.push(new GenerateSourceFile(null, base.generateBase(), 4 /* BASE */));
-      logger.info("Generated base file");
+    try {
+      logger.silly("Started neogen");
+      const parsedRelations = relation.extractRelationsFromDSL(relations);
+      logger.info("Parsed relations DSL");
+      const sources = schemas.map((schema) => new GenerateSourceFile(
+        schema.label,
+        model.generateComposed(ctx, schema, parsedRelations),
+        1 /* MODEL */
+      ));
+      logger.info("Generated types and props defenitions");
+      sources.push(...methods.generateMethodFilesOf(ctx, sources));
+      logger.info("Generated methods files");
+      sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), 0 /* RELATION */));
+      logger.info("Generated relations file");
+      if (ctx.generateBase) {
+        sources.push(new GenerateSourceFile(null, base.generateBase(), 4 /* BASE */));
+        logger.info("Generated base file");
+      }
+      sources.map((it) => it.save(ctx));
+      logger.silly("Done");
+    } catch (e) {
+      logger.error(e);
     }
-    sources.map((it) => it.save(ctx));
-    logger.silly("Done");
   }
   neogen2.generateAll = generateAll;
-  function print(nodes) {
-    const printer = import_typescript.default.createPrinter({ newLine: import_typescript.default.NewLineKind.LineFeed });
-    const resultFile = import_typescript.default.createSourceFile(
-      "",
-      "",
-      import_typescript.default.ScriptTarget.Latest,
-      false,
-      import_typescript.default.ScriptKind.TSX
-    );
-    const result = printer.printList(import_typescript.default.ListFormat.MultiLine, nodes, resultFile);
-    console.log(
-      result.split(";\n").join("\n")
-    );
-  }
   let instance;
   function get() {
     if (!instance) {

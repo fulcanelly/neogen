@@ -63,13 +63,16 @@ declare namespace neogen {
         function generateAllImportsOfModel(modelName: string): ts.Node;
     }
     export namespace common {
-        function straightforwardConvert(object: Object): ts.Expression;
+        function straightforwardConvertValue(value: any): ts.Expression;
+        function straightforwardObjectConvert(object: Object): ts.Expression;
     }
     export namespace model {
         namespace props {
+            function extractTypeFromSchemeType(typeDefenition: Types): ts.TypeNode;
             function generatePropsType(schema: Schema): ts.TypeAliasDeclaration;
         }
         namespace instance {
+            function generatePropTypeExpression(type: Types): ts.Expression;
             function generateModel(schema: Schema): ts.VariableStatement;
         }
         function generateComposed(ctx: ctx, schema: Schema, relations: Relation[]): ts.Node[];
