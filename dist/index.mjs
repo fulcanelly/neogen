@@ -3,6 +3,8 @@ import ts from "typescript";
 import * as R from "ramda";
 import fs from "fs";
 import _ from "lodash";
+import { createLogger, format, transports } from "winston";
+import { consoleFormat } from "winston-console-format";
 var neogen;
 ((neogen2) => {
   let FileType;
@@ -514,10 +516,28 @@ var neogen;
       const resultCode = this.obtainWriteMode() == 1 /* OVERRIDE */ ? generatedFileClaim + printedNodes : printedNodes;
       fs.mkdirSync(ctx.outputFolder, { recursive: true });
       const pathToFile = `${ctx.outputFolder}/${this.obtainFileName()}`;
-      if (this.obtainWriteMode() == 0 /* CREATE_IF_NOT_EXISTS */ && !fs.existsSync(pathToFile)) {
-        fs.writeFileSync(pathToFile, resultCode);
+      const fileExists = fs.existsSync(pathToFile);
+      const minimalInfo = {
+        path: pathToFile,
+        model: this.modelName,
+        type: this.type
+      };
+      if (this.obtainWriteMode() == 0 /* CREATE_IF_NOT_EXISTS */) {
+        if (!fileExists) {
+          fs.writeFileSync(pathToFile, resultCode);
+          logger.verbose("Created new file", minimalInfo);
+        } else {
+          logger.warn("File exists, skipped", minimalInfo);
+        }
       } else if (this.obtainWriteMode() == 1 /* OVERRIDE */) {
         fs.writeFileSync(pathToFile, resultCode);
+        if (fileExists) {
+          logger.verbose("File overridden:", minimalInfo);
+        } else {
+          logger.verbose("New file created:", minimalInfo);
+        }
+      } else {
+        logger.error("Nothing to do with this kind of file", minimalInfo);
       }
     }
     obtainFileName() {
@@ -536,19 +556,56 @@ var neogen;
       ])(this.type);
     }
   }
+  const logger = createLogger({
+    level: "silly",
+    format: format.combine(
+      format.timestamp(),
+      format.ms(),
+      format.errors({ stack: true }),
+      format.splat(),
+      format.json()
+    ),
+    defaultMeta: { service: "Test" },
+    transports: [
+      new transports.Console({
+        format: format.combine(
+          format.colorize({ all: true }),
+          format.padLevels(),
+          consoleFormat({
+            showMeta: true,
+            metaStrip: ["timestamp", "service"],
+            inspectOptions: {
+              depth: Infinity,
+              colors: true,
+              maxArrayLength: Infinity,
+              breakLength: 120,
+              compact: Infinity
+            }
+          })
+        )
+      })
+    ]
+  });
   function generateAll(ctx, schemas, relations) {
+    logger.silly("Started neogen");
     const parsedRelations = relation.extractRelationsFromDSL(relations);
+    logger.info("Parsed relations DSL");
     const sources = schemas.map((schema) => new GenerateSourceFile(
       schema.label,
       model.generateComposed(ctx, schema, parsedRelations),
       1 /* MODEL */
     ));
+    logger.info("Generated types and props defenitions");
     sources.push(...methods.generateMethodFilesOf(ctx, sources));
+    logger.info("Generated methods files");
     sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), 0 /* RELATION */));
+    logger.info("Generated relations file");
     if (ctx.generateBase) {
       sources.push(new GenerateSourceFile(null, base.generateBase(), 4 /* BASE */));
+      logger.info("Generated base file");
     }
     sources.map((it) => it.save(ctx));
+    logger.silly("Done");
   }
   neogen2.generateAll = generateAll;
   function print(nodes) {

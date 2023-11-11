@@ -37,6 +37,8 @@ var import_typescript = __toESM(require("typescript"));
 var R = __toESM(require("ramda"));
 var import_fs = __toESM(require("fs"));
 var import_lodash = __toESM(require("lodash"));
+var import_winston = require("winston");
+var import_winston_console_format = require("winston-console-format");
 var neogen;
 ((neogen2) => {
   let FileType;
@@ -548,10 +550,28 @@ var neogen;
       const resultCode = this.obtainWriteMode() == 1 /* OVERRIDE */ ? generatedFileClaim + printedNodes : printedNodes;
       import_fs.default.mkdirSync(ctx.outputFolder, { recursive: true });
       const pathToFile = `${ctx.outputFolder}/${this.obtainFileName()}`;
-      if (this.obtainWriteMode() == 0 /* CREATE_IF_NOT_EXISTS */ && !import_fs.default.existsSync(pathToFile)) {
-        import_fs.default.writeFileSync(pathToFile, resultCode);
+      const fileExists = import_fs.default.existsSync(pathToFile);
+      const minimalInfo = {
+        path: pathToFile,
+        model: this.modelName,
+        type: this.type
+      };
+      if (this.obtainWriteMode() == 0 /* CREATE_IF_NOT_EXISTS */) {
+        if (!fileExists) {
+          import_fs.default.writeFileSync(pathToFile, resultCode);
+          logger.verbose("Created new file", minimalInfo);
+        } else {
+          logger.warn("File exists, skipped", minimalInfo);
+        }
       } else if (this.obtainWriteMode() == 1 /* OVERRIDE */) {
         import_fs.default.writeFileSync(pathToFile, resultCode);
+        if (fileExists) {
+          logger.verbose("File overridden:", minimalInfo);
+        } else {
+          logger.verbose("New file created:", minimalInfo);
+        }
+      } else {
+        logger.error("Nothing to do with this kind of file", minimalInfo);
       }
     }
     obtainFileName() {
@@ -570,19 +590,56 @@ var neogen;
       ])(this.type);
     }
   }
+  const logger = (0, import_winston.createLogger)({
+    level: "silly",
+    format: import_winston.format.combine(
+      import_winston.format.timestamp(),
+      import_winston.format.ms(),
+      import_winston.format.errors({ stack: true }),
+      import_winston.format.splat(),
+      import_winston.format.json()
+    ),
+    defaultMeta: { service: "Test" },
+    transports: [
+      new import_winston.transports.Console({
+        format: import_winston.format.combine(
+          import_winston.format.colorize({ all: true }),
+          import_winston.format.padLevels(),
+          (0, import_winston_console_format.consoleFormat)({
+            showMeta: true,
+            metaStrip: ["timestamp", "service"],
+            inspectOptions: {
+              depth: Infinity,
+              colors: true,
+              maxArrayLength: Infinity,
+              breakLength: 120,
+              compact: Infinity
+            }
+          })
+        )
+      })
+    ]
+  });
   function generateAll(ctx, schemas, relations) {
+    logger.silly("Started neogen");
     const parsedRelations = relation.extractRelationsFromDSL(relations);
+    logger.info("Parsed relations DSL");
     const sources = schemas.map((schema) => new GenerateSourceFile(
       schema.label,
       model.generateComposed(ctx, schema, parsedRelations),
       1 /* MODEL */
     ));
+    logger.info("Generated types and props defenitions");
     sources.push(...methods.generateMethodFilesOf(ctx, sources));
+    logger.info("Generated methods files");
     sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), 0 /* RELATION */));
+    logger.info("Generated relations file");
     if (ctx.generateBase) {
       sources.push(new GenerateSourceFile(null, base.generateBase(), 4 /* BASE */));
+      logger.info("Generated base file");
     }
     sources.map((it) => it.save(ctx));
+    logger.silly("Done");
   }
   neogen2.generateAll = generateAll;
   function print(nodes) {

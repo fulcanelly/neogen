@@ -4,7 +4,17 @@
   "description": "Code generation tool for `neogma`",
   "repository": "https://github.com/fulcanelly/neogen",
   "license": "MIT",
-  "keywords": ["neo4j", "ogm", "codegen", "orm", "neogma", "typescript", "databases", "cypher", "generation"],
+  "keywords": [
+    "neo4j",
+    "ogm",
+    "codegen",
+    "orm",
+    "neogma",
+    "typescript",
+    "databases",
+    "cypher",
+    "generation"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -18,7 +28,9 @@
     "lodash": "^4.17.21",
     "neogma": "^1.12.3",
     "ramda": "^0.29.1",
-    "typescript": "^5.2.2"
+    "typescript": "^5.2.2",
+    "winston": "^3.11.0",
+    "winston-console-format": "^1.0.8"
   },
   "devDependencies": {
     "@types/node": "^20.9.0",

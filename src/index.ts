@@ -4,6 +4,8 @@ import ts from "typescript";
 import * as R from 'ramda';
 import fs from 'fs';
 import _ from 'lodash';
+import { createLogger, format, transports } from "winston";
+import { consoleFormat } from "winston-console-format";
 
 //////////////////////////////////////
 
@@ -25,8 +27,9 @@ import _ from 'lodash';
 
 // base
 // config options (generateMethods, generateRelations, generateBase bool)
-// unions & shit
+// unions & Revalidator.ISchema<any> | Revalidator.JSONSchema<any>
 // constraints
+// mofidy exisiting files
 
 export namespace neogen {
     export enum FileType {
@@ -293,7 +296,6 @@ export namespace neogen {
             return modelConst
         }
     }
-
 
     export namespace methods {
         function generateStaticMethods(ctx: ctx, label: string): ts.Node {
@@ -598,11 +600,30 @@ export namespace neogen {
             fs.mkdirSync(ctx.outputFolder, { recursive: true });
 
             const pathToFile = `${ctx.outputFolder}/${this.obtainFileName()}`
+            const fileExists = fs.existsSync(pathToFile)
 
-            if (this.obtainWriteMode() == WriteMode.CREATE_IF_NOT_EXISTS && !fs.existsSync(pathToFile)) {
-                fs.writeFileSync(pathToFile, resultCode);
+            const minimalInfo = {
+                path: pathToFile,
+                model: this.modelName,
+                type: this.type,
+            }
+
+            if (this.obtainWriteMode() == WriteMode.CREATE_IF_NOT_EXISTS) {
+                if (!fileExists) {
+                    fs.writeFileSync(pathToFile, resultCode);
+                    logger.verbose('Created new file', minimalInfo)
+                } else {
+                    logger.warn('File exists, skipped', minimalInfo)
+                }
             } else if (this.obtainWriteMode() == WriteMode.OVERRIDE) {
                 fs.writeFileSync(pathToFile, resultCode);
+                if (fileExists) {
+                    logger.verbose('File overridden:', minimalInfo);
+                } else {
+                    logger.verbose('New file created:', minimalInfo);
+                }
+            } else {
+                logger.error('Nothing to do with this kind of file', minimalInfo)
             }
         }
 
@@ -624,25 +645,64 @@ export namespace neogen {
         }
     }
 
+    const logger = createLogger({
+        level: "silly",
+        format: format.combine(
+            format.timestamp(),
+            format.ms(),
+            format.errors({ stack: true }),
+            format.splat(),
+            format.json()
+        ),
+        defaultMeta: { service: "Test" },
+        transports: [
+            new transports.Console({
+                format: format.combine(
+                    format.colorize({ all: true }),
+                    format.padLevels(),
+                    consoleFormat({
+                        showMeta: true,
+                        metaStrip: ["timestamp", "service"],
+                        inspectOptions: {
+                            depth: Infinity,
+                            colors: true,
+                            maxArrayLength: Infinity,
+                            breakLength: 120,
+                            compact: Infinity,
+                        },
+                    })
+                ),
+            }),
+        ],
+    });
 
 
     export function generateAll(ctx: ctx, schemas: Schema[], relations: RelationsDSL) {
+        logger.silly("Started neogen")
         const parsedRelations = relation.extractRelationsFromDSL(relations)
+        logger.info("Parsed relations DSL")
 
         const sources = schemas.map((schema) =>
             new GenerateSourceFile(
                 schema.label,
                 model.generateComposed(ctx, schema, parsedRelations),
                 FileType.MODEL));
+        logger.info("Generated types and props defenitions")
 
         sources.push(...methods.generateMethodFilesOf(ctx, sources))
+        logger.info("Generated methods files")
+
         sources.push(new GenerateSourceFile(null, relation.generateRelationFile(parsedRelations), FileType.RELATION))
+        logger.info("Generated relations file")
 
         if (ctx.generateBase) {
             sources.push(new GenerateSourceFile(null, base.generateBase(), FileType.BASE))
+            logger.info("Generated base file")
         }
 
         sources.map(it => it.save(ctx))
+
+        logger.silly('Done')
     }
 
     function print(nodes: any) {
