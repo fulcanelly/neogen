@@ -9,16 +9,6 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Check for master branch
-        run:
-          echo $REF
-          if [ "$REF" != "refs/heads/master" ]; then
-            echo "Wrong ref"
-            exit 1
-          fi
-        env:
-          REF: ${{ github.ref }}
-
       - name: Checkout
         uses: actions/checkout@v2
         with:
