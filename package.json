@@ -1,9 +1,10 @@
 {
   "name": "neogen",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Code generation tool for `neogma`",
   "repository": "https://github.com/fulcanelly/neogen",
   "license": "MIT",
+  "keywords": ["neo4j", "ogm", "codegen", "orm", "neogma", "typescript", "databases", "cypher", "generation"],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",

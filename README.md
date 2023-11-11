@@ -76,9 +76,7 @@ neogen.generateAll({ // settings
 #### Adjust your `package.json`
 
 ```json
-...
 "scripts": {
-    ...
     "neogen": "ts-node neogen.config.ts",
 ```
 
