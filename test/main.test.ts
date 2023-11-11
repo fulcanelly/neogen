@@ -25,15 +25,14 @@ describe('neogen.', () => {
 
         it('with neo4j types', () => {
           const complexType: neogen.Types = {
-            type: 'number'
+            type: ["string", "boolean"],
+            required: false
           }
 
           expect(
             testlib.serialize(subject(complexType))
-          ).toEqual('{\n    type: "number"\n}\n')
+          ).toEqual('{\n    type: ["string", "boolean"],\n    required: false\n}\n')
         })
-
-
       })
     })
     describe('props.', () => {
@@ -57,11 +56,13 @@ describe('neogen.', () => {
 
         it('with neo4j types', () => {
           const complexType: neogen.Types = {
-            type: 'number'
+            type: ["string", "boolean"],
+            required: false
           }
+
           expect(
             testlib.serialize(subject(complexType))
-          ).toEqual('number\n')
+          ).toEqual('string | boolean\n')
         })
       })
     })

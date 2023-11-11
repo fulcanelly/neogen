@@ -15,8 +15,4 @@ export namespace testlib {
 
     return result.split(';\n').join('\n')
   }
-
-  // export function print(nodes: any) {
-  //   console.log(serialize(nodes))
-  // }
 }

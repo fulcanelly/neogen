@@ -190,10 +190,38 @@ export namespace neogen {
   }
 
   export namespace common {
-    export function straightforwardConvert(object: Object): ts.Expression {
+    export function straightforwardConvertValue(value: any): ts.Expression {
+      if (typeof value == 'string') {
+        return ts.factory.createStringLiteral(value)
+      }
+
+      if (typeof value == 'number') {
+        return ts.factory.createNumericLiteral(value)
+      }
+
+      if (typeof value == 'boolean') {
+        return value ?
+          ts.factory.createTrue() :
+          ts.factory.createFalse()
+      }
+
+      if (value instanceof Array) {
+        return ts.factory.createArrayLiteralExpression(
+          value.map(straightforwardConvertValue))
+      }
+
+      if (value instanceof Object) {
+        return straightforwardObjectConvert(value)
+      }
+
+      console.log(value)
+      throw 'Non supported type'
+    }
+
+    export function straightforwardObjectConvert(object: Object): ts.Expression {
       return ts.factory.createObjectLiteralExpression(
         Object.entries(object).map(([key, value]) =>
-          ts.factory.createPropertyAssignment(key, ts.factory.createStringLiteral(value))
+          ts.factory.createPropertyAssignment(key, straightforwardConvertValue(value))
         ),
         true
       );
@@ -261,7 +289,7 @@ export namespace neogen {
 
           return createSimpleTypeDef(typeArray)
         } else if (type instanceof Object) {
-          return common.straightforwardConvert(type)
+          return common.straightforwardObjectConvert(type)
         } else {
           throw new Error("Invalid type");
         }
