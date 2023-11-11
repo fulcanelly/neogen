@@ -31,6 +31,11 @@ import { consoleFormat } from "winston-console-format";
 // constraints
 // mofidy exisiting files
 
+// relation validation: error unknown model
+// sample
+// common schema
+// update readme
+
 export namespace neogen {
     export enum FileType {
         RELATION,
@@ -44,7 +49,7 @@ export namespace neogen {
         CREATE_IF_NOT_EXISTS,
         OVERRIDE
     }
-    export type PropType = { name: string, type: string }
+    export type PropType = { name: string, type: Types }
 
     export type ctx = {
         outputFolder: string,
@@ -52,7 +57,9 @@ export namespace neogen {
     }
 
     type ModelToImport = string
-    export type Types = 'string' | 'boolean' | 'number'
+
+    type BasicTypes = Revalidator.Types
+    export type Types = undefined | BasicTypes | BasicTypes[] | Revalidator.ISchema<any> | Revalidator.JSONSchema<any>
     export type PropsTypes = { [prop: string]: Types }
     export type RelationsDSL = Object
     export type Schema = {
@@ -180,24 +187,172 @@ export namespace neogen {
                 undefined  // assert clause
             );
         }
+    }
 
-
+    export namespace common {
+        export function straightforwardConvert(object: Object): ts.Expression {
+            return ts.factory.createObjectLiteralExpression(
+                Object.entries(object).map(([key, value]) =>
+                    ts.factory.createPropertyAssignment(key, ts.factory.createStringLiteral(value))
+                ),
+                true
+            );
+        }
     }
 
     export namespace model {
-        function generatePropsType(schema: Schema): ts.TypeAliasDeclaration {
-            const propsTypes = Object.entries(schema.schema)
-                .map(([name, typeName]) => createPropertySignature(
-                    name,
-                    ts.factory.createKeywordTypeNode(typeMapping[typeName])
-                ))
+
+        export namespace props {
+            function extractTypeFromSchemeType(typeDefenition: Types): ts.TypeNode {
+                if (typeof typeDefenition == 'string') {
+                    return ts.factory.createKeywordTypeNode(typeMapping[typeDefenition]) as ts.TypeNode
+                }
+
+                if (typeDefenition instanceof Array) {
+                    return ts.factory.createUnionTypeNode([
+                        ...typeDefenition.map(extractTypeFromSchemeType)
+                    ])
+                }
+
+                if (typeDefenition instanceof Object) {
+                    const adjusted = typeDefenition as Revalidator.ISchema<any> | Revalidator.JSONSchema<any>
+                    return extractTypeFromSchemeType(adjusted.type)
+                }
+
+                throw 'Unknown type format'
+            }
+
+
+            export function generatePropsType(schema: Schema): ts.TypeAliasDeclaration {
+                const propsTypes = Object.entries(schema.schema)
+                    .map(([name, typeName]) => createPropertySignature(
+                        name,
+                        extractTypeFromSchemeType(typeName)
+                    ))
+
+                return ts.factory.createTypeAliasDeclaration(
+                    [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+                    schema.label + 'Props',
+                    undefined,
+                    ts.factory.createTypeLiteralNode(propsTypes)
+                )
+            }
+        }
+
+        export namespace instance {
+            function createSimpleTypeDef(value: ts.Expression): ts.Expression {
+                return ts.factory.createObjectLiteralExpression([
+                    ts.factory.createPropertyAssignment(
+                        'type', value)
+                ])
+            }
+
+            function generatePropTypeExpression(type: Types): ts.Expression {
+                if (type === undefined) {
+                    throw new Error("Type is undefined");
+                }
+
+                if (typeof type === 'string') {
+                    return createSimpleTypeDef(ts.factory.createStringLiteral(type));
+                } if (type instanceof Array) {
+                    const typeArray =
+                        ts.factory.createArrayLiteralExpression(
+                            type.map(t => ts.factory.createStringLiteral(t)))
+
+                    return createSimpleTypeDef(typeArray)
+                } else if (type instanceof Object) {
+                    return common.straightforwardConvert(type)
+                } else {
+                    throw new Error("Invalid type");
+                }
+            }
+
+            function generateSpeicifProp(prop: PropType) {
+                return ts.factory.createPropertyAssignment(
+                    prop.name,
+                    generatePropTypeExpression(prop.type)
+                )
+            }
+
+            export function generateModel(schema: Schema) {
+                const neogmaInstance =
+                    ts.factory.createCallExpression(
+                        ts.factory.createPropertyAccessExpression(
+                            ts.factory.createIdentifier('neogen'),
+                            ts.factory.createIdentifier('get')
+                        ),
+                        undefined,
+                        [])
+
+                const modelFactoryCall = ts.factory.createCallExpression(
+                    ts.factory.createIdentifier('ModelFactory'), // Expression
+                    [
+                        ts.factory.createTypeReferenceNode(schema.label + 'Props', undefined),
+                        ts.factory.createTypeReferenceNode(schema.label + 'RelatedNodesI', undefined),
+                        typing.staticMethodsNameFor(schema.label),
+                        typing.instanceMethodsNameFor(schema.label),
+
+                    ],
+                    [
+                        ts.factory.createObjectLiteralExpression([
+                            ts.factory.createPropertyAssignment(
+                                'methods', ts.factory.createIdentifier(naming.instanceMethodsNameFor(schema.label))
+                            ),
+                            ts.factory.createPropertyAssignment(
+                                'statics', ts.factory.createIdentifier(naming.staticMethodsNameFor(schema.label))
+                            ),
+                            ts.factory.createPropertyAssignment(
+                                'label',
+                                ts.factory.createStringLiteral(schema.label)
+                            ),
+                            ts.factory.createPropertyAssignment(
+                                'schema',
+                                ts.factory.createObjectLiteralExpression(
+                                    Object.entries(schema.schema).map(([name, type]) => generateSpeicifProp({ name, type }))
+                                    , true)
+                            ),
+                            ts.factory.createPropertyAssignment(
+                                'primaryKeyField',
+                                ts.factory.createStringLiteral('uuid')
+                            ),
+                        ], true),
+                        neogmaInstance
+                    ]
+                );
+
+                const modelConst = ts.factory.createVariableStatement(
+                    [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
+                    ts.factory.createVariableDeclarationList(
+                        [ts.factory.createVariableDeclaration(
+                            schema.label,
+                            undefined,
+                            undefined,
+                            modelFactoryCall
+                        )],
+                        ts.NodeFlags.Const
+                    )
+                );
+
+                return modelConst
+            }
+        }
+
+        function generateInstanceType(label: string): ts.TypeAliasDeclaration {
+
+            const instanceMethodsName = naming.instanceMethodsNameFor(label)
+
+            const neogmaInstanceType = ts.factory.createTypeReferenceNode('NeogmaInstance', [
+                ts.factory.createTypeReferenceNode(label + 'Props', undefined),
+                ts.factory.createTypeReferenceNode(label + 'RelatedNodesI', undefined),
+                ts.factory.createTypeQueryNode(ts.factory.createIdentifier(instanceMethodsName))
+            ]);
 
             return ts.factory.createTypeAliasDeclaration(
                 [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
-                schema.label + 'Props',
-                undefined,
-                ts.factory.createTypeLiteralNode(propsTypes)
-            )
+                label + 'Instance',
+                [], // Type parameters
+                neogmaInstanceType,
+            );
         }
 
         export function generateComposed(ctx: ctx, schema: Schema, relations: Relation[]): ts.Node[] {
@@ -212,9 +367,9 @@ export namespace neogen {
 
             const body = [
                 generateInstanceType(schema.label),
-                generatePropsType(schema),
+                props.generatePropsType(schema),
                 relationNodes,
-                generateModel(schema),
+                instance.generateModel(schema),
             ].flatMap(it => [it, ts.factory.createEmptyStatement()])
 
             return [
@@ -222,79 +377,7 @@ export namespace neogen {
             ]
         }
 
-        function generateSpeicifProp(prop: PropType) {
-            return ts.factory.createPropertyAssignment(
-                prop.name,
-                ts.factory.createObjectLiteralExpression([
-                    ts.factory.createPropertyAssignment(
-                        'type',
-                        ts.factory.createStringLiteral(prop.type),
-                    )
-                ], false)
-            )
-        }
 
-        function generateModel(schema: Schema) {
-            const neogmaInstance =
-                ts.factory.createCallExpression(
-                    ts.factory.createPropertyAccessExpression(
-                        ts.factory.createIdentifier('neogen'),
-                        ts.factory.createIdentifier('get')
-                    ),
-                    undefined,
-                    [])
-
-            const modelFactoryCall = ts.factory.createCallExpression(
-                ts.factory.createIdentifier('ModelFactory'), // Expression
-                [
-                    ts.factory.createTypeReferenceNode(schema.label + 'Props', undefined),
-                    ts.factory.createTypeReferenceNode(schema.label + 'RelatedNodesI', undefined),
-                    typing.staticMethodsNameFor(schema.label),
-                    typing.instanceMethodsNameFor(schema.label),
-
-                ],
-                [
-                    ts.factory.createObjectLiteralExpression([
-                        ts.factory.createPropertyAssignment(
-                            'methods', ts.factory.createIdentifier(naming.instanceMethodsNameFor(schema.label))
-                        ),
-                        ts.factory.createPropertyAssignment(
-                            'statics', ts.factory.createIdentifier(naming.staticMethodsNameFor(schema.label))
-                        ),
-                        ts.factory.createPropertyAssignment(
-                            'label',
-                            ts.factory.createStringLiteral(schema.label)
-                        ),
-                        ts.factory.createPropertyAssignment(
-                            'schema',
-                            ts.factory.createObjectLiteralExpression(
-                                Object.entries(schema.schema).map(([name, type]) => generateSpeicifProp({ name, type })) as any// schema.schema
-                                , true)
-                        ),
-                        ts.factory.createPropertyAssignment(
-                            'primaryKeyField',
-                            ts.factory.createStringLiteral('uuid')
-                        ),
-                    ], true),
-                    neogmaInstance
-                ]
-            );
-
-            const modelConst = ts.factory.createVariableStatement(
-                [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
-                ts.factory.createVariableDeclarationList(
-                    [ts.factory.createVariableDeclaration(
-                        schema.label,
-                        undefined,
-                        undefined,
-                        modelFactoryCall
-                    )],
-                    ts.NodeFlags.Const
-                )
-            );
-
-            return modelConst
-        }
     }
 
     export namespace methods {
@@ -556,25 +639,6 @@ export namespace neogen {
         'string': ts.SyntaxKind.StringKeyword,
         'boolean': ts.SyntaxKind.BooleanKeyword,
         'number': ts.SyntaxKind.NumberKeyword,
-    }
-
-
-    function generateInstanceType(label: string): ts.TypeAliasDeclaration {
-
-        const instanceMethodsName = naming.instanceMethodsNameFor(label)
-
-        const neogmaInstanceType = ts.factory.createTypeReferenceNode('NeogmaInstance', [
-            ts.factory.createTypeReferenceNode(label + 'Props', undefined),
-            ts.factory.createTypeReferenceNode(label + 'RelatedNodesI', undefined),
-            ts.factory.createTypeQueryNode(ts.factory.createIdentifier(instanceMethodsName))
-        ]);
-
-        return ts.factory.createTypeAliasDeclaration(
-            [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
-            label + 'Instance',
-            [], // Type parameters
-            neogmaInstanceType,
-        );
     }
 
     const generatedFileClaim = '// GENERATED FILE, MAY CHANGE IN FUTURE, DO NOT EDIT IT MANUALLY\n'

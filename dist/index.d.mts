@@ -15,14 +15,15 @@ declare namespace neogen {
     }
     export type PropType = {
         name: string;
-        type: string;
+        type: Types;
     };
     export type ctx = {
         outputFolder: string;
         generateBase?: boolean;
     };
     type ModelToImport = string;
-    export type Types = 'string' | 'boolean' | 'number';
+    type BasicTypes = Revalidator.Types;
+    export type Types = undefined | BasicTypes | BasicTypes[] | Revalidator.ISchema<any> | Revalidator.JSONSchema<any>;
     export type PropsTypes = {
         [prop: string]: Types;
     };
@@ -61,7 +62,16 @@ declare namespace neogen {
         function generateNeogenImport(): ts.ImportDeclaration;
         function generateAllImportsOfModel(modelName: string): ts.Node;
     }
+    export namespace common {
+        function straightforwardConvert(object: Object): ts.Expression;
+    }
     export namespace model {
+        namespace props {
+            function generatePropsType(schema: Schema): ts.TypeAliasDeclaration;
+        }
+        namespace instance {
+            function generateModel(schema: Schema): ts.VariableStatement;
+        }
         function generateComposed(ctx: ctx, schema: Schema, relations: Relation[]): ts.Node[];
     }
     export namespace methods {
