@@ -1,0 +1,13 @@
+name: Publish to NPM
+
+on: [push]
+
+
+jobs:
+  reftest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo test
+        run: echo $AAA
+        env:
+          AAA: ${{ github.ref }}
