@@ -8,6 +8,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Echo test
-        run: echo $AAA
+        run: |
+          echo $AAA
+          echo $BBB
+          echo $CCC
         env:
           AAA: ${{ github.ref }}
+          BBB: ${{ github.base_ref }}
+          CCC: ${{ github.base_ref }}
