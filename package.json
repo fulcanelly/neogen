@@ -19,15 +19,18 @@
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "tsup"
+    "build": "tsup",
+    "test": "npx jest ./test"
   },
   "dependencies": {
+    "@types/jest": "^29.5.8",
     "@types/lodash": "^4.14.201",
     "@types/ramda": "^0.29.8",
     "fs": "^0.0.1-security",
     "lodash": "^4.17.21",
     "neogma": "^1.12.3",
     "ramda": "^0.29.1",
+    "ts-jest": "^29.1.1",
     "typescript": "^5.2.2",
     "winston": "^3.11.0",
     "winston-console-format": "^1.0.8"
