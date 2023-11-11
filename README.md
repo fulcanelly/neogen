@@ -130,10 +130,10 @@ import './models/__relations'
 
 ## TODO
 - Core
- - [ ] Validate relations
- - [x] Auto instance import
- - [ ] Relation getters
+     - [ ] Validate relations
+     - [x] Auto instance import
+     - [ ] Relation getters
 - Organizational
- - [ ] Eslint
- - [ ] Use Github workflow for publishing npm
- - [ ] Add tests
+     - [ ] Eslint
+     - [ ] Use Github workflow for publishing npm
+     - [ ] Add tests
