@@ -2,13 +2,12 @@ name: Publish to NPM
 
 on:
   push:
-    branches:
-      - main
     tags:
       - '*'
 
 jobs:
   build:
+    if: github.ref == 'refs/heads/master'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
