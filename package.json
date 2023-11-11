@@ -1,6 +1,6 @@
 {
   "name": "neogen",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Code generation tool for `neogma`",
   "repository": "https://github.com/fulcanelly/neogen",
   "license": "MIT",

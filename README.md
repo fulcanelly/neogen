@@ -4,12 +4,116 @@ neogen is a code generation tool for `neogma`, focused on automating and streaml
 
 ## Motivation
 
-Developed with inspiration from Ruby on Rails' `rails g`, neo4gen eliminates the repetitive and error-prone aspects of manual Neo4j OGM setup in `neogma`. Its primary goal is to enhance development efficiency and accuracy in managing Neo4j database schemas and relationships.
+Developed with inspiration from Ruby on Rails' `rails g`, neogen eliminates the repetitive and error-prone aspects of manual Neo4j OGM setup in `neogma`. Its primary goal is to enhance development efficiency and accuracy in managing Neo4j database schemas and relationships.
 
 
 ## How to use
 
-```ts
-//TODO
-const test: number = 0
+#### Installing
+
+```shell
+yarn add neogen
 ```
+
+#### Create config file
+
+```shell
+touch neogen.config.ts
+
+```
+
+#### Write desired schema:
+
+Assuming your project structure to be like this
+```
+├── package.json
+└── src
+    ├── index.ts
+    ├── neo4j.ts
+    └── models
+```
+
+Where `neo4j.ts` contains instance of `Neogma` connection exported as `neogma` variable:
+
+```typescript
+const neogma = new Neogma(...
+```
+
+Update `neogen.config.ts` file:
+
+```typescript
+import { neogen } from "neogen";
+
+neogen.generateAll({ // settings
+    neogamaInstanceName: 'neogma',
+    pathToNeogama: '../neo4j',
+    outputFolder: './src/models'
+}, [{ // models
+    label: 'Post',
+    schema: {
+        uuid: 'string',
+        text: 'string'
+    }
+}, {
+    label: 'User',
+    schema: {
+        name: 'string',
+        uuid: 'string',
+        online: 'boolean'
+    }
+}], { // relations
+    POST_POSTED_BY: {
+        User: 'posted',
+        Post: 'of_user',
+    },
+    POST_LIKED_BY: {
+        User: 'likes',
+        Post: 'liked_by'
+    },
+})
+```
+
+#### Adjust your `package.json`
+
+```json
+...
+"scripts": {
+    ...
+    "neogen": "ts-node neogen.config.ts",
+```
+
+And finally run
+
+```shell
+yarn run neogen
+```
+
+### Result
+
+With this configuration it'll generate 5 files
+
+```
+├── neogen.config.ts
+├── package.json
+├── src
+│   ├── index.ts
+│   ├── models
+│   │   ├── __relations.ts
+│   │   ├── _post.ts
+│   │   ├── _user.ts
+│   │   ├── post.ts
+│   │   └── user.ts
+│   └── neo4j.ts
+└── yarn.lock
+
+```
+- `post`, `user` - the ones containing all type and meta information
+- `_post` and `_user` - contains static and instance methods of the models
+- `__relations` - contains all relations defenitions, it's important to import it in main file
+
+
+
+## TODO
+ - [ ] Validate relations
+ - [ ] Auto instance import
+ - [ ] Relation getters
