@@ -1,3 +1,4 @@
+import { Neogma } from 'neogma';
 import ts from 'typescript';
 
 declare namespace neogen {
@@ -17,8 +18,6 @@ declare namespace neogen {
         type: string;
     };
     export type ctx = {
-        neogamaInstanceName: string;
-        pathToNeogama: string;
         outputFolder: string;
     };
     type ModelToImport = string;
@@ -54,7 +53,7 @@ declare namespace neogen {
     export namespace imports {
         function generateMethodsImport(modelName: string): ts.ImportDeclaration;
         function generateStaticImports(): ts.ImportDeclaration;
-        function generateNeogamaInstanceImport(neogamaInstanceName: string, pathToneogama: string): ts.ImportDeclaration;
+        function generateNeogenImport(): ts.ImportDeclaration;
         function generateAllImportsOfModel(modelName: string): ts.Node;
     }
     export namespace model {
@@ -79,6 +78,8 @@ declare namespace neogen {
         obtainWriteMode(): WriteMode;
     }
     export function generateAll(ctx: ctx, schemas: Schema[], relations: RelationsDSL): void;
+    export function get(): Neogma;
+    export function setInstance(val: Neogma): void;
     export {};
 }
 

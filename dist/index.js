@@ -115,7 +115,7 @@ var neogen;
       );
     }
     imports2.generateStaticImports = generateStaticImports;
-    function generateNeogamaInstanceImport(neogamaInstanceName, pathToneogama) {
+    function generateNeogenImport() {
       return import_typescript.default.factory.createImportDeclaration(
         void 0,
         // modifiers array
@@ -125,16 +125,16 @@ var neogen;
           void 0,
           // No namespace import
           import_typescript.default.factory.createNamedImports([
-            importSpecifierFromName(neogamaInstanceName)
+            importSpecifierFromName("neogen")
           ])
         ),
-        import_typescript.default.factory.createStringLiteral(pathToneogama),
+        import_typescript.default.factory.createStringLiteral("neogen"),
         // module specifier
         void 0
         // assert clause
       );
     }
-    imports2.generateNeogamaInstanceImport = generateNeogamaInstanceImport;
+    imports2.generateNeogenImport = generateNeogenImport;
     function generateAllImportsOfModel(modelName) {
       const toImport = [
         modelName,
@@ -180,7 +180,7 @@ var neogen;
       const importBody = [
         imports.generateStaticImports(),
         imports.generateMethodsImport(schema.label),
-        imports.generateNeogamaInstanceImport(ctx.neogamaInstanceName, ctx.pathToNeogama),
+        imports.generateNeogenImport(),
         ...R.uniq(toImport).map(imports.generateAllImportsOfModel)
       ];
       const body = [
@@ -207,6 +207,14 @@ var neogen;
       );
     }
     function generateModel(schema) {
+      const neogmaInstance = import_typescript.default.factory.createCallExpression(
+        import_typescript.default.factory.createPropertyAccessExpression(
+          import_typescript.default.factory.createIdentifier("neogen"),
+          import_typescript.default.factory.createIdentifier("get")
+        ),
+        void 0,
+        []
+      );
       const modelFactoryCall = import_typescript.default.factory.createCallExpression(
         import_typescript.default.factory.createIdentifier("ModelFactory"),
         // Expression
@@ -242,7 +250,7 @@ var neogen;
               import_typescript.default.factory.createStringLiteral("uuid")
             )
           ], true),
-          import_typescript.default.factory.createIdentifier("neogma")
+          neogmaInstance
         ]
       );
       const modelConst = import_typescript.default.factory.createVariableStatement(
@@ -504,6 +512,21 @@ var neogen;
       result.split(";\n").join("\n")
     );
   }
+  console.log("init");
+  let instance;
+  function get() {
+    console.log("get");
+    if (!instance) {
+      throw new Error("Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order");
+    }
+    return instance;
+  }
+  neogen2.get = get;
+  function setInstance(val) {
+    console.log("set");
+    instance = val;
+  }
+  neogen2.setInstance = setInstance;
 })(neogen || (neogen = {}));
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

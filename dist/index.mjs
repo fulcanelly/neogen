@@ -81,7 +81,7 @@ var neogen;
       );
     }
     imports2.generateStaticImports = generateStaticImports;
-    function generateNeogamaInstanceImport(neogamaInstanceName, pathToneogama) {
+    function generateNeogenImport() {
       return ts.factory.createImportDeclaration(
         void 0,
         // modifiers array
@@ -91,16 +91,16 @@ var neogen;
           void 0,
           // No namespace import
           ts.factory.createNamedImports([
-            importSpecifierFromName(neogamaInstanceName)
+            importSpecifierFromName("neogen")
           ])
         ),
-        ts.factory.createStringLiteral(pathToneogama),
+        ts.factory.createStringLiteral("neogen"),
         // module specifier
         void 0
         // assert clause
       );
     }
-    imports2.generateNeogamaInstanceImport = generateNeogamaInstanceImport;
+    imports2.generateNeogenImport = generateNeogenImport;
     function generateAllImportsOfModel(modelName) {
       const toImport = [
         modelName,
@@ -146,7 +146,7 @@ var neogen;
       const importBody = [
         imports.generateStaticImports(),
         imports.generateMethodsImport(schema.label),
-        imports.generateNeogamaInstanceImport(ctx.neogamaInstanceName, ctx.pathToNeogama),
+        imports.generateNeogenImport(),
         ...R.uniq(toImport).map(imports.generateAllImportsOfModel)
       ];
       const body = [
@@ -173,6 +173,14 @@ var neogen;
       );
     }
     function generateModel(schema) {
+      const neogmaInstance = ts.factory.createCallExpression(
+        ts.factory.createPropertyAccessExpression(
+          ts.factory.createIdentifier("neogen"),
+          ts.factory.createIdentifier("get")
+        ),
+        void 0,
+        []
+      );
       const modelFactoryCall = ts.factory.createCallExpression(
         ts.factory.createIdentifier("ModelFactory"),
         // Expression
@@ -208,7 +216,7 @@ var neogen;
               ts.factory.createStringLiteral("uuid")
             )
           ], true),
-          ts.factory.createIdentifier("neogma")
+          neogmaInstance
         ]
       );
       const modelConst = ts.factory.createVariableStatement(
@@ -470,6 +478,21 @@ var neogen;
       result.split(";\n").join("\n")
     );
   }
+  console.log("init");
+  let instance;
+  function get() {
+    console.log("get");
+    if (!instance) {
+      throw new Error("Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order");
+    }
+    return instance;
+  }
+  neogen2.get = get;
+  function setInstance(val) {
+    console.log("set");
+    instance = val;
+  }
+  neogen2.setInstance = setInstance;
 })(neogen || (neogen = {}));
 export {
   neogen

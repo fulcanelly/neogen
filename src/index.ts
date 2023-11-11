@@ -1,4 +1,4 @@
-import { ModelFactory, ModelRelatedNodesI, NeogmaInstance } from "neogma";
+import { ModelFactory, ModelRelatedNodesI, Neogma, NeogmaInstance } from "neogma";
 // import { neogma } from "../neo4j";
 import ts from "typescript";
 import * as R from 'ramda';
@@ -38,8 +38,6 @@ export namespace neogen {
     export type PropType = { name: string, type: string }
 
     export type ctx = {
-        neogamaInstanceName: string,
-        pathToNeogama: string,
         outputFolder: string
     }
     type ModelToImport = string
@@ -114,17 +112,17 @@ export namespace neogen {
             );
         }
 
-        export function generateNeogamaInstanceImport(neogamaInstanceName: string, pathToneogama: string) {
+        export function generateNeogenImport() {
             return ts.factory.createImportDeclaration(
                 undefined, // modifiers array
                 ts.factory.createImportClause(
                     false, // IsTypeOnly
                     undefined, // No namespace import
                     ts.factory.createNamedImports([
-                        importSpecifierFromName(neogamaInstanceName)
+                        importSpecifierFromName('neogen')
                     ])
                 ),
-                ts.factory.createStringLiteral(pathToneogama), // module specifier
+                ts.factory.createStringLiteral('neogen'), // module specifier
                 undefined  // assert clause
             );
         }
@@ -176,7 +174,7 @@ export namespace neogen {
             const importBody: ts.Node[] = [
                 imports.generateStaticImports(),
                 imports.generateMethodsImport(schema.label),
-                imports.generateNeogamaInstanceImport(ctx.neogamaInstanceName, ctx.pathToNeogama),
+                imports.generateNeogenImport(),
                 ...R.uniq(toImport).map(imports.generateAllImportsOfModel),
             ]
 
@@ -205,6 +203,15 @@ export namespace neogen {
         }
 
         function generateModel(schema: Schema) {
+            const neogmaInstance =
+                ts.factory.createCallExpression(
+                ts.factory.createPropertyAccessExpression(
+                    ts.factory.createIdentifier('neogen'),
+                    ts.factory.createIdentifier('get')
+                ),
+                undefined,
+                [])
+
             const modelFactoryCall = ts.factory.createCallExpression(
                 ts.factory.createIdentifier('ModelFactory'), // Expression
                 [
@@ -237,7 +244,7 @@ export namespace neogen {
                             ts.factory.createStringLiteral('uuid')
                         ),
                     ], true),
-                    ts.factory.createIdentifier('neogma')
+                    neogmaInstance
                 ]
             );
 
@@ -542,6 +549,23 @@ export namespace neogen {
         console.log(
             result.split(';\n').join('\n'))
 
+    }
+
+    console.log('init')
+    let instance: Neogma
+
+    export function get(): Neogma {
+        console.log('get')
+        if (!instance) {
+            throw new Error('Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order')
+        }
+        return instance
+    }
+
+    export function setInstance(val: Neogma): void {
+        console.log('set')
+
+        instance = val
     }
 
 }

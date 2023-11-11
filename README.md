@@ -22,10 +22,11 @@ touch neogen.config.ts
 
 ```
 
-#### Write desired schema:
+### Update your connection
 
-Assuming your project structure to be like this
+At this point assuming your project' structure to be like this
 ```
+├── neogen.config.ts
 ├── package.json
 └── src
     ├── index.ts
@@ -33,11 +34,20 @@ Assuming your project structure to be like this
     └── models
 ```
 
-Where `neo4j.ts` contains instance of `Neogma` connection exported as `neogma` variable:
+Where `neo4j.ts` contains instance of `Neogma` connection:
+
+It's required to add this lines so that neogen could find connection, since models depend on it's value
 
 ```typescript
+import { neogen } from "neogen";
+// ...
 const neogma = new Neogma(...
+// ...
+neogen.setInstance(neogma)
+
 ```
+
+#### Write desired schema:
 
 Update `neogen.config.ts` file:
 
@@ -45,8 +55,6 @@ Update `neogen.config.ts` file:
 import { neogen } from "neogen";
 
 neogen.generateAll({ // settings
-    neogamaInstanceName: 'neogma',
-    pathToNeogama: '../neo4j',
     outputFolder: './src/models'
 }, [{ // models
     label: 'Post',
@@ -93,25 +101,39 @@ With this configuration it'll generate 5 files
 ```
 ├── neogen.config.ts
 ├── package.json
-├── src
-│   ├── index.ts
-│   ├── models
-│   │   ├── __relations.ts
-│   │   ├── _post.ts
-│   │   ├── _user.ts
-│   │   ├── post.ts
-│   │   └── user.ts
-│   └── neo4j.ts
-└── yarn.lock
+└── src
+    ├── index.ts
+    ├── models
+    │   ├── __relations.ts
+    │   ├── _post.ts
+    │   ├── _user.ts
+    │   ├── post.ts
+    │   └── user.ts
+    └── neo4j.ts
 
 ```
+
 - `post`, `user` - the ones containing all type and meta information
 - `_post` and `_user` - contains static and instance methods of the models
 - `__relations` - contains all relations defenitions, it's important to import it in main file
 
 
+### Update your main file
+
+It's important to import it in this order in your main/index file before using any models:
+
+```ts
+import './neo4j' // or whatever your file with neo4j connection is named
+import './models/__relations'
+```
+
 
 ## TODO
+- Core
  - [ ] Validate relations
- - [ ] Auto instance import
+ - [x] Auto instance import
  - [ ] Relation getters
+- Organizational
+ - [ ] Eslint
+ - [ ] Use Github workflow for publishing npm
+ - [ ] Add tests
