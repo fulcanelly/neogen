@@ -203,7 +203,7 @@ export namespace neogen {
   export namespace model {
 
     export namespace props {
-      function extractTypeFromSchemeType(typeDefenition: Types): ts.TypeNode {
+      export function extractTypeFromSchemeType(typeDefenition: Types): ts.TypeNode {
         if (typeof typeDefenition == 'string') {
           return ts.factory.createKeywordTypeNode(typeMapping[typeDefenition]) as ts.TypeNode
         }
@@ -247,7 +247,7 @@ export namespace neogen {
         ])
       }
 
-      function generatePropTypeExpression(type: Types): ts.Expression {
+      export function generatePropTypeExpression(type: Types): ts.Expression {
         if (type === undefined) {
           throw new Error("Type is undefined");
         }
@@ -771,23 +771,6 @@ export namespace neogen {
     } catch (e) {
       logger.error(e)
     }
-  }
-
-  function print(nodes: any) {
-    const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
-    const resultFile = ts.createSourceFile(
-      "",
-      "",
-      ts.ScriptTarget.Latest,
-      false,
-      ts.ScriptKind.TSX
-    );
-
-    const result = printer.printList(ts.ListFormat.MultiLine, nodes, resultFile);
-
-    console.log(
-      result.split(';\n').join('\n'))
-
   }
 
   let instance: Neogma
