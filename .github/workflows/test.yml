@@ -1,4 +1,4 @@
-name: "tests"
+name: "ts_tests"
 
 
 on: [push]
