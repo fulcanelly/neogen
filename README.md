@@ -1,6 +1,6 @@
 # neogen
 
-![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/fulcanelly/neogen/tests)
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/fulcanelly/neogen/test.yml)
 ![NPM](https://img.shields.io/npm/l/neogen)
 
 # What is neogen?
