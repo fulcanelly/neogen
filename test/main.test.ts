@@ -2,6 +2,38 @@ import { neogen } from "../src/index"
 import { testlib } from "./lib"
 
 describe('neogen.', () => {
+  describe('validations.', () => {
+    describe('validateRelations()', () => {
+      const subject = neogen.validations.validateRelations
+      const schemas = [
+        { label: 'User', schema: {} },
+        { label: 'Post', schema: {} },
+      ];
+
+      test('should return no errors for valid relations', () => {
+        const relations: neogen.Relation[] = [
+          { from: 'User', to: 'Post', direction: 'out', label: 'WRITES', alias: 'author' },
+        ];
+
+        const errors = subject(relations, schemas);
+        expect(errors).toHaveLength(0);
+      });
+
+      test('should return errors for invalid relations', () => {
+        const relations: neogen.Relation[] = [
+          { from: 'User', to: 'Comment', direction: 'out', label: 'WRITES', alias: 'commenter' },
+          { from: 'Article', to: 'Post', direction: 'in', label: 'INCLUDED_IN', alias: 'content' },
+        ];
+
+        const errors = subject(relations, schemas);
+        expect(errors).toHaveLength(2);
+        expect(errors).toEqual([
+          { unknownLabel: 'Comment', relation: relations[0] },
+          { unknownLabel: 'Article', relation: relations[1] },
+        ]);
+      });
+    });
+  })
   describe('model.', () => {
     describe('instance.', () => {
       describe('generatePropTypeExpression()', () => {

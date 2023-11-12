@@ -502,7 +502,6 @@ export namespace neogen {
     }
   }
 
-
   export namespace base {
 
     function generateStaticMethodsBase(): ts.Node {
@@ -652,6 +651,23 @@ export namespace neogen {
     }
   }
 
+  export namespace validations {
+    export type RelationError = {
+      unknownLabel: string,
+      relation: Relation
+    }
+
+    export function validateRelations(relations: Relation[], schema: Schema[]): RelationError[] {
+      const allModelLabels = schema.map(s => s.label)
+
+      return relations.flatMap(rel =>
+        R.reject((name: string) => allModelLabels.includes(name))
+          ([rel.from, rel.to])
+          .map(name => ({ unknownLabel: `${rel.label}:${name}`, relation: rel }))
+      )
+    }
+  }
+
   const lowerFirstChar = (str: string) =>
     str.charAt(0).toLowerCase() + str.slice(1)
 
@@ -770,6 +786,16 @@ export namespace neogen {
       logger.silly("Started neogen")
       const parsedRelations = relation.extractRelationsFromDSL(relations)
       logger.info("Parsed relations DSL")
+
+      const relationErrors = validations.validateRelations(parsedRelations, schemas)
+      if (relationErrors.length) {
+
+        relationErrors.forEach(error =>
+          logger.error(`Error while validating relation '${error.unknownLabel}':`, error.relation))
+        throw 'end execution'
+      }
+
+      logger.info('Successfully validated relations')
 
       const sources = schemas.map((schema) =>
         new GenerateSourceFile(
