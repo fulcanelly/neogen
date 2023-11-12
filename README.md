@@ -67,14 +67,16 @@ neogen.generateAll({ // settings
     schema: {
         uuid: 'string',
         text: 'string'
-    }
+    },
+    primaryKeyField: 'uuid'
 }, {
     label: 'User',
     schema: {
         name: 'string',
         uuid: 'string',
         online: 'boolean'
-    }
+    },
+    primaryKeyField: 'uuid'
 }], { // relations
     POST_POSTED_BY: {
         User: 'posted',

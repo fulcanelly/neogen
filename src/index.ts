@@ -64,7 +64,8 @@ export namespace neogen {
   export type RelationsDSL = Object
   export type Schema = {
     label: string,
-    schema: PropsTypes
+    schema: PropsTypes,
+    primaryKeyField?: string // TODO: add validation, kind of keyof PropsTypes[string]
   }
   export type Relation = {
     from: string,
@@ -312,6 +313,32 @@ export namespace neogen {
             undefined,
             [])
 
+        const schemaEntry = [
+          ts.factory.createPropertyAssignment(
+            'methods', ts.factory.createIdentifier(naming.instanceMethodsNameFor(schema.label))
+          ),
+          ts.factory.createPropertyAssignment(
+            'statics', ts.factory.createIdentifier(naming.staticMethodsNameFor(schema.label))
+          ),
+          ts.factory.createPropertyAssignment(
+            'label',
+            ts.factory.createStringLiteral(schema.label)
+          ),
+          ts.factory.createPropertyAssignment(
+            'schema',
+            ts.factory.createObjectLiteralExpression(
+              Object.entries(schema.schema).map(([name, type]) => generateSpeicifProp({ name, type }))
+              , true)
+          ),
+        ]
+
+        if (schema.primaryKeyField) {
+          schemaEntry.push(ts.factory.createPropertyAssignment(
+            'primaryKeyField',
+            ts.factory.createStringLiteral(schema.primaryKeyField!)
+          ),)
+        }
+
         const modelFactoryCall = ts.factory.createCallExpression(
           ts.factory.createIdentifier('ModelFactory'), // Expression
           [
@@ -322,24 +349,7 @@ export namespace neogen {
 
           ],
           [
-            ts.factory.createObjectLiteralExpression([
-              ts.factory.createPropertyAssignment(
-                'methods', ts.factory.createIdentifier(naming.instanceMethodsNameFor(schema.label))
-              ),
-              ts.factory.createPropertyAssignment(
-                'statics', ts.factory.createIdentifier(naming.staticMethodsNameFor(schema.label))
-              ),
-              ts.factory.createPropertyAssignment(
-                'label',
-                ts.factory.createStringLiteral(schema.label)
-              ),
-              ts.factory.createPropertyAssignment(
-                'schema',
-                ts.factory.createObjectLiteralExpression(
-                  Object.entries(schema.schema).map(([name, type]) => generateSpeicifProp({ name, type }))
-                  , true)
-              )
-            ], true),
+            ts.factory.createObjectLiteralExpression(schemaEntry, true),
             neogmaInstance
           ]
         );
