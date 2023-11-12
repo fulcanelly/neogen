@@ -338,11 +338,7 @@ export namespace neogen {
                 ts.factory.createObjectLiteralExpression(
                   Object.entries(schema.schema).map(([name, type]) => generateSpeicifProp({ name, type }))
                   , true)
-              ),
-              ts.factory.createPropertyAssignment(
-                'primaryKeyField',
-                ts.factory.createStringLiteral('uuid')
-              ),
+              )
             ], true),
             neogmaInstance
           ]
