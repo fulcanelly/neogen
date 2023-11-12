@@ -28,8 +28,8 @@ describe('neogen.', () => {
         const errors = subject(relations, schemas);
         expect(errors).toHaveLength(2);
         expect(errors).toEqual([
-          { unknownLabel: 'Comment', relation: relations[0] },
-          { unknownLabel: 'Article', relation: relations[1] },
+          { unknownLabel: 'WRITES:Comment', relation: relations[0] },
+          { unknownLabel: 'INCLUDED_IN:Article', relation: relations[1] },
         ]);
       });
     });
