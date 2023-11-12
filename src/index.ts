@@ -432,7 +432,7 @@ export namespace neogen {
               ts.factory.createIdentifier(naming.staticMethodsNameFor(label)),
               undefined,
               undefined,
-              ts.factory.createObjectLiteralExpression(objectContent, false)
+              ts.factory.createObjectLiteralExpression(objectContent, true)
             )
           ],
           ts.NodeFlags.Const
@@ -484,7 +484,7 @@ export namespace neogen {
               undefined,
               ts.factory.createObjectLiteralExpression(
                 objectContent,
-                false
+                true
               )
             )
           ],
@@ -505,6 +505,7 @@ export namespace neogen {
         (file: GenerateSourceFile) => [
           imports.generateAllImportsOfModel(file.modelName!),
           ...importsBody,
+          ts.factory.createEmptyStatement(),
           generateStaticMethods(ctx, file.modelName!),
           generateInstanceMethods(ctx, file.modelName!)
         ]
@@ -705,7 +706,8 @@ export namespace neogen {
       const resultFile = ts.createSourceFile("", "", ts.ScriptTarget.Latest, false, ts.ScriptKind.TSX);
       const printer = ts.createPrinter({ newLine: ts.NewLineKind.LineFeed });
 
-      let printedNodes = this.nodes.map(node => printer.printNode(ts.EmitHint.Unspecified, node, resultFile)).join('\n');
+      let printedNodes = this.nodes.map(node => printer.printNode(ts.EmitHint.Unspecified, node, resultFile))
+        .join('\n').split(';\n').join('\n')
 
       const resultCode = this.obtainWriteMode() == WriteMode.OVERRIDE ?
         generatedFileClaim + printedNodes :
