@@ -689,6 +689,7 @@ export namespace neogen {
     'string': ts.SyntaxKind.StringKeyword,
     'boolean': ts.SyntaxKind.BooleanKeyword,
     'number': ts.SyntaxKind.NumberKeyword,
+    'null': ts.SyntaxKind.UndefinedKeyword
   }
 
   const generatedFileClaim = '// GENERATED FILE, MAY CHANGE IN FUTURE, DO NOT EDIT IT MANUALLY\n'
