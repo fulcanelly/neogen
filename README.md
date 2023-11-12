@@ -60,6 +60,7 @@ Update `neogen.config.ts` file:
 import { neogen } from "neogen";
 
 neogen.generateAll({ // settings
+    generateBase: true,
     outputFolder: './src/models'
 }, [{ // models
     label: 'Post',
@@ -101,27 +102,26 @@ yarn run neogen
 
 ### Result
 
-With this configuration it'll generate 5 files
+With this configuration it'll generate 6 files
 
 ```
 ├── neogen.config.ts
 ├── package.json
 └── src
-    ├── index.ts
-    ├── models
-    │   ├── __relations.ts
-    │   ├── _post.ts
-    │   ├── _user.ts
-    │   ├── post.ts
-    │   └── user.ts
-    └── neo4j.ts
+    └── models
+        ├── __base.ts
+        ├── __relations.ts
+        ├── post.ts
+        ├── post_.ts
+        ├── user.ts
+        └── user_.ts
 
 ```
 
 - `post`, `user` - the ones containing all type and meta information
-- `_post` and `_user` - contains static and instance methods of the models
+- `post_` and `user_` - contains static and instance methods of the models
 - `__relations` - contains all relations defenitions, it's important to import it in main file
-
+- `__base` - contains base of instance and statics methods if `generateBase` option is enabled
 
 ### Update your main file
 

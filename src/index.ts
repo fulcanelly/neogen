@@ -84,7 +84,7 @@ export namespace neogen {
 
     export namespace file {
       export const forModel = (label: string) => _.snakeCase(label)
-      export const forModelMethods = (label: string) => '_' + _.snakeCase(label)
+      export const forModelMethods = (label: string) => _.snakeCase(label) + '_'
       export const forBaseMethods = () => '__base'
     }
   }
