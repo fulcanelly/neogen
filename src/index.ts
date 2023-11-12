@@ -589,7 +589,7 @@ export namespace neogen {
 
 
     export function generateRelationsType(modelLabel: string, relations: Relation[]): [ts.InterfaceDeclaration, ModelToImport[]] {
-      const relationSchema = R.groupBy(rel => rel.from, relations)[modelLabel]!
+      const relationSchema = R.groupBy(rel => rel.from, relations)[modelLabel]! ?? []
 
       const needToImportModels: string[] = relationSchema.map(rel => rel.to)
 
