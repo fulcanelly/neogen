@@ -140,5 +140,5 @@ import './models/__relations'
      - [ ] Relation getters
 - Organizational
      - [ ] Eslint
-     - [ ] Use Github workflow for publishing npm
-     - [ ] Add tests
+     - [x] Use Github workflow for publishing npm
+     - [x] Add tests
