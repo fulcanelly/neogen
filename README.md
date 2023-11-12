@@ -7,6 +7,11 @@
 
 neogen is a code generation tool for `neogma`, focused on automating and streamlining the development of Neo4j object-graph mappings (OGMs). It facilitates efficient model generation, relationship setup, and method creation, while ensuring type safety in Neo4j-based projects.
 
+## What problems does it solve ?
+ - Relations validation:
+ - Efficiency - neogma introduces great type safety, hints but with it requires more editing: if one property changes - you would need to edit two declaration, neogen tries to solve this issue
+ - Structure
+
 ## Motivation
 
 Developed with inspiration from Ruby on Rails' `rails g`, neogen eliminates the repetitive and error-prone aspects of manual Neo4j OGM setup in `neogma`. Its primary goal is to enhance development efficiency and accuracy in managing Neo4j database schemas and relationships.
@@ -134,6 +139,22 @@ import './neo4j' // or whatever your file with neo4j connection is named
 import './models/__relations'
 ```
 
+## relations DSL explanation
+
+Give this relationship declrartion:
+```ts
+const rel = {
+  POST_POSTED_BY: {
+        User: 'posted',
+        Post: 'of_user',
+    }
+}
+```
+It would translate to
+
+```chyper
+(:User)-[:POST_POSTED_BY]->(:Post)
+```
 
 ## TODO
 - Core
