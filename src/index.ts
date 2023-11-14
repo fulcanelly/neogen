@@ -598,6 +598,7 @@ export namespace neogen {
       const relationSchema = R.groupBy(rel => rel.from, relations)[modelLabel]! ?? []
 
       const needToImportModels: string[] = relationSchema.map(rel => rel.to)
+        .filter(rel => rel != modelLabel)
 
       const modelRelations = relationSchema
         .map(rel =>
