@@ -156,6 +156,23 @@ It would translate to
 (:User)-[:POST_POSTED_BY]->(:Post)
 ```
 
+Or if you want node relation to itself you can make
+
+```ts
+const rel = {
+  POST_POSTED_BY: {
+    Comment: ['replied_to', 'replies']
+  }
+}
+```
+
+Which would result to
+
+```chyper
+(:Comment)-[:POST_POSTED_BY]->(:Comment)
+```
+
+
 ## TODO
 - Core
      - [ ] Validate relations

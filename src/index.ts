@@ -564,30 +564,35 @@ export namespace neogen {
   export namespace relation {
 
     export function extractRelationsFromDSL(dsl: Object): Relation[] {
-      return Object.entries(dsl)
-        .flatMap(([label, entry]) => {
-          const [[from, alias], [fromB, aliasB]] = Object.entries(entry) as string[][]
+      return R.chain(([label, entry]) => {
+        const entries = R.toPairs(entry);
+        if (entries.length > 2) {
+          throw new Error('polymorphic relations not supported by neogma');
+        }
 
-          const inRel: Relation = {
-            from,
-            to: fromB,
-            direction: 'out',
-            label,
-            alias
-          }
+        const makeRelation = (from: string, to: string, direction: 'in' | 'out', alias: string) =>
+          ({ from, to, direction, label, alias } as Relation);
 
-          const outRel: Relation = {
-            from: fromB,
-            to: from,
-            direction: 'in',
-            label: label,
-            alias: aliasB
-          }
+        const [[from, alias]] = entries as any;
 
-          return [inRel, outRel]
-        })
+        // When only one relation is provided and it's an array.
+        if (entries.length === 1 && alias instanceof Array) {
+          return alias.map((aname, i) => makeRelation(from, from, !i ? 'out' : 'in', aname))
+        }
+
+        const relations = [];
+
+        const to: string = entries[1]?.[0] || from;
+        const aliasB: string = entries[1]?.[1] || alias;
+
+        relations.push(makeRelation(from, to, 'out', alias));
+        if (to !== from || aliasB !== alias) {
+          relations.push(makeRelation(to, from, 'in', aliasB));
+        }
+
+        return relations;
+      }, R.toPairs(dsl));
     }
-
 
     export function generateRelationsType(modelLabel: string, relations: Relation[]): [ts.InterfaceDeclaration, ModelToImport[]] {
       const relationSchema = R.groupBy(rel => rel.from, relations)[modelLabel]! ?? []

@@ -2,6 +2,80 @@ import { neogen } from "../src/index"
 import { testlib } from "./lib"
 
 describe('neogen.', () => {
+  describe('relation.', () => {
+    const subject = neogen.relation.extractRelationsFromDSL
+
+    describe('extractRelationsFromDSL()', () => {
+      it('should generate normal relations', () => {
+        const dsl = {
+          POST_COMMENTED: {
+            ChannelPost: 'commented',
+            PostComment: 'to_post'
+          },
+        }
+
+        expect(subject(dsl)).toStrictEqual([
+          {
+            from: 'ChannelPost',
+            to: 'PostComment',
+            direction: 'out',
+            label: 'POST_COMMENTED',
+            alias: 'commented'
+          },
+          {
+            from: 'PostComment',
+            to: 'ChannelPost',
+            direction: 'in',
+            label: 'POST_COMMENTED',
+            alias: 'to_post'
+          }
+        ])
+      })
+
+      it('should generate signle relation', () => {
+        const dsl = {
+          COMMENT_REPLIED_TO: {
+            PostComment: 'replied_to'
+          }
+        }
+
+        expect(subject(dsl)).toStrictEqual([
+          {
+            from: 'PostComment',
+            to: 'PostComment',
+            direction: 'out',
+            label: 'COMMENT_REPLIED_TO',
+            alias: 'replied_to'
+          },
+        ])
+      })
+
+      it('should generate relation to itself', () => {
+        const dsl = {
+          COMMENT_REPLIED_TO: {
+            PostComment: ['replied_to', 'replies']
+          }
+        }
+
+        expect(subject(dsl)).toStrictEqual([
+          {
+            from: 'PostComment',
+            to: 'PostComment',
+            direction: 'out',
+            label: 'COMMENT_REPLIED_TO',
+            alias: 'replied_to'
+          },
+          {
+            from: 'PostComment',
+            to: 'PostComment',
+            direction: 'in',
+            label: 'COMMENT_REPLIED_TO',
+            alias: 'replies'
+          }
+        ])
+      })
+    })
+  })
   describe('validations.', () => {
     describe('validateRelations()', () => {
       const subject = neogen.validations.validateRelations
