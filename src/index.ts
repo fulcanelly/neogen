@@ -252,12 +252,19 @@ export namespace neogen {
       }
 
 
+      const isOptionalType = (types: Types) => types == 'null' || (types instanceof Array && types.includes('null'))
+
       export function generatePropsType(schema: Schema): ts.TypeAliasDeclaration {
         const propsTypes = Object.entries(schema.schema)
-          .map(([name, typeName]) => createPropertySignature(
-            name,
-            extractTypeFromSchemeType(typeName)
-          ))
+          .map(([name, typeName]) => {
+            return createPropertySignature(
+              name,
+              extractTypeFromSchemeType(typeName),
+              {
+                optional: isOptionalType(typeName)
+              }
+            );
+          })
 
         return ts.factory.createTypeAliasDeclaration(
           [ts.factory.createModifier(ts.SyntaxKind.ExportKeyword)],
@@ -688,9 +695,15 @@ export namespace neogen {
   const lowerFirstChar = (str: string) =>
     str.charAt(0).toLowerCase() + str.slice(1)
 
-  const createPropertySignature = (name: string, type: ts.TypeNode) =>
-    ts.factory.createPropertySignature(undefined, name, undefined, type)
+  export type TypePropOptions = { optional: boolean }
 
+  const createPropertySignature = (name: string, type: ts.TypeNode, propOptions?: TypePropOptions) => {
+    let token: ts.QuestionToken | undefined
+    if (propOptions?.optional) {
+      token = ts.factory.createToken(ts.SyntaxKind.QuestionToken)
+    }
+    return ts.factory.createPropertySignature(undefined, name, token, type)
+  }
 
   const typeMapping: { [key: string]: ts.KeywordTypeSyntaxKind } = {
     'string': ts.SyntaxKind.StringKeyword,

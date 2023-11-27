@@ -142,6 +142,37 @@ describe('neogen.', () => {
       })
     })
     describe('props.', () => {
+      describe('generatePropsType()', () => {
+        const subject = neogen.model.props.generatePropsType
+
+        it('with basic schema', () => {
+
+          const schema: neogen.Schema = {
+            label: "",
+            schema: {
+              name: 'string'
+            }
+          }
+
+          expect(
+            testlib.serialize(subject(schema))
+          ).toBe('export type Props = {\n    name: string\n}\n')
+        })
+
+        it('with nullable field, should make optional field ', () => {
+          const schema: neogen.Schema = {
+            label: "",
+            schema: {
+              name: ['string', 'null']
+            }
+          }
+
+          expect(
+            testlib.serialize(subject(schema))
+          ).toBe('export type Props = {\n    name?: string | undefined\n}\n')
+        })
+      })
+
       describe('extractTypeFromSchemeType()', () => {
         const subject = neogen.model.props.extractTypeFromSchemeType
 
