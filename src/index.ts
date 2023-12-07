@@ -53,7 +53,8 @@ export namespace neogen {
 
   export type ctx = {
     outputFolder: string,
-    generateBase?: boolean
+    generateBase?: boolean,
+    rawRelation?: Relation[] | undefined
   }
 
   type ModelToImport = string
@@ -816,14 +817,17 @@ export namespace neogen {
   export function generateAll(ctx: ctx, schemas: Schema[], relations: RelationsDSL) {
     try {
       logger.silly("Started neogen")
-      const parsedRelations = relation.extractRelationsFromDSL(relations)
+      const parsedRelations = [
+        ...relation.extractRelationsFromDSL(relations),
+        ...ctx.rawRelation ?? []
+      ]
       logger.info("Parsed relations DSL")
 
       const relationErrors = validations.validateRelations(parsedRelations, schemas)
       if (relationErrors.length) {
 
         relationErrors.forEach(error =>
-          logger.error(`Error while validating relation '${error.unknownLabel}':`, error.relation))
+          logger.error(`Error while validating relation unknownLabel - '${error.unknownLabel}':`, error.relation))
         throw 'end execution'
       }
 

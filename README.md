@@ -172,6 +172,20 @@ Which would result to
 (:Comment)-[:POST_POSTED_BY]->(:Comment)
 ```
 
+Or you can use raw relation notation:
+```js
+
+neogen.generateAll({
+    rawRelation: [
+        {
+            from: 'Session',
+            to: 'Channel',
+            direction: 'in',
+            label: 'TEST',
+            alias: 'test'
+        }
+        ...
+```
 
 ## TODO
 - Core
