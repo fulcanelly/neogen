@@ -861,7 +861,7 @@ export namespace neogen {
 
   let instance: Neogma
 
-  export function get(): Neogma {
+  export function get(): any {
     if (!instance) {
       throw new Error('Ensure you call neogen.setInstance(noegmaInstance) and all imported in right order')
     }
